@@ -50,6 +50,90 @@ Roads can be very curvy and unpredictable, which brings a lot of complexity when
 ### Sensing the traffic
 We loop over the given sensor fusion data to get nearby vehicles position and speed to determine if there is any car in fron of us and also if there is any vehicle in the left or right lane.
 
+The following code is used to determine if there is a car in front of us which is slower than us.
+If it finds a fster lane on the righ or left it tries to change lane by generating a new set of waypoints.
+
+```
+// loop over sensor fusion data to find front cars
+    for (int i = 0; i < sensor_fusion.size(); ++i){
+      // check if front car d Frenet component is within safety distance
+      if (( lane_id*lane_width < sensor_fusion[i][6]) && (sensor_fusion[i][6] < (lane_id+1)*lane_width))
+      {
+        if ((sensor_fusion[i][5] < (end_path_s + safety_dist)) && (sensor_fusion[i][5] > (car_s - 5.0)))
+        {           
+          // calculate front car absolute speed            
+          front_car_speed = std::sqrt( pow(sensor_fusion[i][3],2.0) + pow(sensor_fusion[i][4],2.0) ); 
+          // calculate the diference in speed between the two cars
+          delta_speed = car_speed - front_car_speed;
+          // if front car going slower then match speed
+          if (delta_speed >= 0.0){
+            ref_speed = front_car_speed;
+            front_car_slower = 1;
+          } 
+        }
+      }
+
+      // check if left lane is free
+      // make sure car is not in the left most lane
+      if ((lane_id > 0) && ((lane_id - 1) * lane_width < sensor_fusion[i][6]) && (sensor_fusion[i][6] < lane_id * lane_width))
+      {
+        // look for available space in the left lane
+        if ((sensor_fusion[i][5] < car_s + 2*safety_dist) && (sensor_fusion[i][5] > car_s - safety_dist/2))
+        {       
+          left_clear = 0;
+        }
+        // check for traffic speed in the left lane, if any
+        if (sensor_fusion[i][5] > car_s - 5.0){       
+          speed_per_lane[lane_id - 1] = std::sqrt( pow(sensor_fusion[i][3],2.0) + pow(sensor_fusion[i][4],2.0) );
+        }              
+      }
+
+      // check if right lane is free
+      // make sure car is not in the right most lane            
+      if ((lane_id < 2) && ((lane_id+1) * lane_width < sensor_fusion[i][6]) && (sensor_fusion[i][6] < (lane_id+2) * lane_width) )
+      {
+        // Right lane clear
+        if ((sensor_fusion[i][5] < car_s + 2*safety_dist) && (sensor_fusion[i][5] > car_s - safety_dist/2))
+        {
+          right_clear = 0;
+        }
+        // check for traffic speed in the right lane, if any
+        if (sensor_fusion[i][5] > car_s - 5.0)
+        {       
+          speed_per_lane[lane_id + 1] = std::sqrt( pow(sensor_fusion[i][3],2.0) + pow(sensor_fusion[i][4],2.0) );
+        }  
+      }            
+    }   
+```
+Lane shift code
+
+```
+// change lanes if a lane is faster than me and a lane change is not already in progress
+    if ( (front_car_slower == 1) && (car_speed < 0.9 * max_speed) && (change_lane == 0)) 
+    {
+      change_lane = 1;
+    }
+
+    if (change_lane == 1){
+      if ((lane_id > 0) && (left_clear == 1))
+      {
+        lane_id = lane_id - 1;
+        change_lane = 0;
+      }
+      else if ((lane_id < 2) && (right_clear == 1))
+      {
+        lane_id = lane_id + 1;
+        change_lane = 0;
+      }        
+    }
+
+    // transfer previous path's points to new path
+    for (int i = 0; i < path_size; ++i)
+    {
+      next_x_vals.push_back(previous_path_x[i]);
+      next_y_vals.push_back(previous_path_y[i]);
+    }
+```
 ### Waypoint generation
 We tell the car where to move by producing waypoints (x,y). This sequence of points is then followed by the car by moving forward in a given angle and speed.
 
