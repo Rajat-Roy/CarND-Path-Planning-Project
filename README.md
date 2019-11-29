@@ -57,7 +57,7 @@ To get a smooth trajectory we use a spline to generate waypoints that follows th
 
 The following code is used to generate a smooth path by generating new waypoints
  
- '''
+```
  // calculate spline points ahead of ego vehicle, spaced by spline_dist
           new_wp = getXY(car_s + spline_dist,(lane_width/2 + lane_width*lane_id), map_waypoints_s, map_waypoints_x, map_waypoints_y);
           ptsx.push_back(new_wp[0]);
@@ -68,7 +68,7 @@ The following code is used to generate a smooth path by generating new waypoints
           new_wp = getXY(car_s + 3*spline_dist,(lane_width/2 + lane_width*lane_id), map_waypoints_s, map_waypoints_x, map_waypoints_y);
           ptsx.push_back(new_wp[0]);
           ptsy.push_back(new_wp[1]);
-'''
+```
 
 
 
